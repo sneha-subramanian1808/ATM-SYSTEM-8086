@@ -1,0 +1,637 @@
+; Executed on EMU8086
+.MODEL SMALL
+.STACK
+.DATA
+; here we declare global variables
+; string declaration type of data DB, '$' signals end of string
+insuff db "You have insufficient funds$"
+menu1 db "Press 1 to check you current balance$"
+menu2 db "Press 2 to withdraw$"
+menu3 db "Press 3 to deposit$",
+menu4 db "Press 4 to change PIN$"
+menu5 db "Press 5 to exit$"
+acc0 DB "0000"
+acc1 DB "0001"
+acc2 DB "0002"
+acc3 DB "0003"
+acc4 DB "0004"
+acc5 DB "0005"
+acc6 DB "0006"
+acc7 DB "0007"
+acc8 DB "0008"
+acc9 DB "0009"
+BUFFER DB 5,?,5 DUP (" ")
+pin_nw DB 5,?,5 DUP (" ")
+pin_nw2 DB 5,?,5 DUP (" ")
+old_pn DB 5,?,5 DUP (" ")
+diff db 7 dup (" ")
+sum db 7 dup (" ")
+withdraw db 8,?,8 dup (" ")
+deposit db 8,?,8 dup (" ")
+correction db "0000000$"
+correction2 db "0000000$"
+wrng_pin db "WRONG PIN!!!!$"
+pin_new db "Enter your new PIN $"
+pin_new2 db "Confirm your new pin number$"
+old_pin db "Enter your current PIN$"
+wrong_entry db "You have not selected any menu options.$"
+INITIAL DB "WELCOME TO ATM SYSTEM $"
+WELCOME DB "PLEASE ENTER YOUR ACCOUNT NUMBER $"
+NON_EXISTANT_ACC DB "THAT ACCOUNT NUMBER DOES NOT EXIST ,CONTACT
+US !!! $"
+GOODMORNING DB "Hello $"
+WARNING DB "LAST CHANCE $"
+IN_YOUR_ACCCOUNT DB "Your current balance is RS. $"
+balance db "Your account balance is $"
+WELCOME2 db "Please enter your Pin Number: $"
+WARNING2 DB "LAST CHANCE. : $"
+BLOCKED2 DB "PIN BLOCKED. $"
+amount DB "Enter Amount to Withdraw: $"
+dep db "Enter Amount to Deposit: $"
+name0 db "MR.BRIAN BIKETI$"
+name1 db "Mr.MARIAM KIMULI $"
+name2 db "Ms.MARYANNE ANNNE$"
+name3 db "DR.AMBANI NESTER$"
+name4 db "Mr.JUSTUS OTIENO $"
+name5 db "Mr.FELLIX OTIS $"
+name6 db "Ms.BASEL WAFULA$"
+name7 db "Mr.ELAS MUHOZI$"
+name8 db "Mr.SONKO MIKE $"
+name9 db "MR.SIGIDA MUZIKI $"
+pin0 db "0000"
+pin1 db "0001"
+pin2 db "0002"
+pin3 db "0003"
+pin4 db "0004"
+pin5 db "0005"
+pin6 db "0006"
+pin7 db "0007"
+pin8 db "0008"
+pin9 db "0009"
+bal0 db "8000000$"
+bal1 db "0000500$"
+bal2 db "3008$"
+bal3 db "0002010$"
+bal4 db "04019$"
+bal5 db "20202$"
+bal6 db "800000$"
+bal7 db "400$"
+bal8 db "3008$"
+bal9 db "2000$"
+NUM1 DB 7 DUP (?)
+NUM2 DB 7 DUP (?)
+NUM3 DB 7 DUP (?)
+NUM4 DB 7 DUP (?)
+pin_ent db 4 (?)
+.CODE
+START:
+; before starting the DS register must be explicitly set to point to the DATA SEGMENT
+;this is done here, its done in 2 step because thea is no command to directly access seegment
+registers
+MOV AX,@DATA
+MOV DS,AX
+MOV ES,AX
+MOV CX,2
+ENTER:
+CALL NEWLINE
+PUSH CX
+MOV DX, OFFSET INITIAL ; standard method of outputting astring to screen. , set the DX
+register to the OFFSET of the INITIAL string
+MOV AH, 09H; output message, value of 9 inserted into AH register to select subfunction 9 of
+the interrupt 21h DOS interrupts.this interrupt requires
+;the DS:DX segment offsset pair point to the string to be output
+INT 21H
+CALL NEWLINE
+PUSH CX; contents of CX are pushed onto the stack and restored after interrupt procedure is
+called.
+MOV DX,OFFSET WELCOME
+MOV AH,09H
+INT 21H
+CALL NEWLINE
+MOV DX,OFFSET BUFFER[0]; set the input buffer
+;ah=0ah is the buffered standard input function that gets characters from keyboard and continues
+doing so untill the user presses enter
+;all characters and final carriage return are placed in the storage stace that starts at the 3rd byte of
+the input buffer
+;supplied by calling program via DS:DX
+MOV AH,0AH; input of a string to DS:DX, fist byte is buffer size, second byte is number of
+chars actually read
+INT 21H
+CALL NEWLINE
+LEA SI,acc0; Load Effective Address. sets SI to the offset of acc0
+MOV CX,10
+COMPARE:
+PUSH CX
+LEA DI,[BUFFER + 2] , ;[BUFFER+2] is a memory address gotten by summing buffer + 2, to
+get address of source, however lea is
+;different to mov as instead of loading data present at source, it just loads the address of the
+source
+MOV CX,4 ; set counter to four iterations, the repetions of comparison btween di and si is done
+4 times
+REPE CMPSB ; compares byte at address DS:(E)SI with byte at address ES:(E)DI and sets
+status flag accordngly
+JZ KARIBU ; conditional jump ,jumps to "KARIBU" if the zero flag is set to 1
+ADD SI,CX
+POP CX
+LOOP COMPARE
+CALL NEWLINE
+POP CX
+LOOP ENTER
+JMP FINAL
+FINAL:; final test before blocking
+MOV DX,OFFSET WARNING
+MOV AH,09H
+INT 21H
+CALL NEWLINE
+mov DX,offset BUFFER[0]
+MOV AH,0AH
+INT 21H
+CALL NEWLINE
+lea si,acc0
+mov cx,10
+final_compare:
+push cx
+lea di,[BUFFER + 2]
+MOV CX,4
+REPE CMPSB
+JZ KARIBU
+ADD SI,CX
+POP CX
+loop final_compare
+JNZ PIN_BLOCKED
+KARIBU:
+XOR AX,AX; sets ax register to zero
+xor bx,bx; set bx register to zero
+MOV al,[buffer+5]
+sub al,30h
+mov bl,20
+mul bl
+lea dx,name0
+add dx,ax
+push dx ; push the value of client name0 name onto the stack
+MOV DX,OFFSET GOODMORNING; use the emptied DX register to display greeting
+MOV AH,09H
+INT 21H
+pop dx; get the cleints name from the stack to display it after greetin
+MOV AH,09H
+INT 21H
+CALL NEWLINE
+call pin_number; transfer control to the pin number procedure to check credatials of customer
+pin_number PROC
+MOV CX,2 ; we want to give customer two chances to input correct password
+CHECK:
+PUSH CX
+MOV DX,OFFSET WELCOME2; offset means effective address
+MOV AH,09H
+INT 21H
+CALL NEWLINE
+;MOV DX,OFFSET BUFFER3[0]
+;MOV AH,0AH
+;INT 21H
+mov bx,0
+mov cx,4; the number of bytes that repressent pin
+;the following loop takes the user input and outputs an asterik on its place
+ent_pin:
+mov ah,7 ;direct character input without echo, return read in Al
+int 21h
+mov pin_ent[bx],al; whatever pin gotten is moved to pin_ent[bx]
+mov ah,02;write character to standard output;DL character to write
+mov dl,2ah
+int 21h
+inc bx
+loop ent_pin
+mov ah,0 ;retrieves a buffer with user input,used to pause execution waiting for user to resume
+program
+int 16h ;responsible for pc keyboard control
+COMP:
+XOR AX,AX; clear the AX register
+xor bx,bx ;clear the BX register
+MOV al,[buffer+5]
+sub al,30H; by subtracting 30h we the bcd form of the value in al,
+mov bl,4
+mul bl
+MOV SI,AX ;
+LEA DX,[PIN0+si]
+MOV SI,DX
+MOV DI,OFFSET pin_ent[0]
+MOV CX,4
+REPE CMPSB ; compares the four bytes of the saved pin and inputted pin
+JZ menu
+POP CX
+CALL NEWLINE
+LOOP CHECK
+JNZ FINAL_pin
+FINAL_pin:
+MOV DX,OFFSET WARNING2
+MOV AH,09H
+INT 21H
+CALL NEWLINE
+mov bx,0
+mov cx,4
+ent_pin2:
+mov ah,7
+int 21h
+mov pin_ent[bx],al ; the digit we have just input is stored into bx
+mov ah,02 ; write character to standard output,DL-character to write,AL-last character output
+mov dl,2ah; asterik in ascii to conceal password
+int 21h
+inc bx
+loop ent_pin2; runs the number of iterations stored in CX register
+mov ah,0
+int 16h ; this interrupt is resposible for pc keyboard control, allowing us to key ENTER
+XOR AX,AX
+xor bx,bx
+MOV al,[buffer+5]
+sub al,30h
+mov bl,4
+mul bl
+MOV SI,AX
+LEA DX,[PIN0+SI]
+MOV SI,DX
+MOV DI,OFFSET pin_ent[0]
+MOV CX,4
+REPE CMPSB
+JZ menu
+JNZ BLOCKED3
+pin_number ENDP
+BLOCKED3:
+MOV DX,OFFSET BLOCKED2
+MOV AH,09H
+INT 21H
+CALL EXIT
+menu: ; if password is corretct we print out the string menus we had decared as global varables
+call newline
+mov dx,offset menu1,menu2
+mov ah,09h
+int 21h
+call newline
+mov dx,offset menu2
+mov ah,09h
+int 21h
+call newline
+mov dx,offset menu3
+mov ah,09h
+int 21h
+call newline
+mov dx,offset menu4
+mov ah,09h
+int 21h
+call newline
+mov dx,offset menu5
+mov ah,09h
+int 21h
+call newline
+menu_process:
+mov ah,01h; read character from standard input with echo; AL stores character read
+int 21h
+sub al,30h
+cmp al,1
+jz check_bal
+cmp al,2
+jz withdrw
+cmp al,3
+jz depo
+cmp al,4
+jz change_pin
+cmp al,5
+jz exit
+cmp al,6
+jae choose_again
+choose_again:
+call newline
+mov dx,offset wrong_entry
+mov ah,09h
+int 21h
+jmp menu
+;*****************************************************************************
+****************
+check_bal:
+call newline
+XOR AX,AX
+xor bx,bx
+MOV al,[buffer+5]
+sub al,30h
+mov bl,8
+mul bl
+mov si,ax; clear the si memory
+lea si,[bal0+si]
+mov cx,6
+curnt_bal:
+mov al,[si]
+sub al,30h
+jnz bal_disp
+inc si
+loop curnt_bal
+bal_disp:
+call newline
+MOV DX, OFFSET IN_YOUR_ACCCOUNT
+MOV AH,09H
+INT 21H
+MOV DX,si
+INT 21H
+jmp menu
+CALL NEWLINE
+;*****************************************************************************
+****************
+withdrw:
+call newline
+cmp si,20000
+je insufficient
+MOV DX,OFFSET amount
+MOV AH,09H
+INT 21H
+call calculation
+PIN_BLOCKED:
+MOV DX,OFFSET NON_EXISTANT_ACC
+MOV AH,09H
+INt 21h
+call exit
+;ANZIA HAPA UKITEREMKA
+calculation proc
+mov dx,offset withdraw
+mov ah,0ah
+int 21h
+CALL NEWLINE
+mov cx,7
+mov bx,0
+reset_correction:
+mov correction[bx],"0"
+inc bx
+loop reset_correction
+xor bx,bx
+mov bl,7
+sub bl,withdraw[1]
+XOR CX,cx
+mov CL,withdraw[1]
+lea si,withdraw[2]
+lea di,correction[bx]
+replacement:
+mov al,[si]
+mov [di],al
+inc si
+inc di
+loop replacement
+MOV BX,6
+MOV CX,7
+NUMBER1:
+MOV AL,CORRECTION[BX]
+SUB AL,30H
+MOV NUM1[BX],AL
+DEC BX
+LOOP NUMBER1
+subtraction:
+XOR AX,AX
+xor bx,bx
+MOV al,[buffer+5]
+sub al,30H
+mov bl,8
+mul bl
+MOV SI,AX
+lea si,[bal0+si+6]
+call newline
+MOV BX,6
+MOV CX,7
+NUMBER2:
+MOV AL,[SI]
+SUB AL,30H
+MOV NUM2[BX],AL
+DEC SI
+DEC BX
+LOOP NUMBER2
+mov bx,0
+mov cx,7
+not_less:
+mov al,num2[bx]
+cmp al,num1[bx]
+ja continuation
+jb insufficient
+inc bx
+loop not_less
+continuation:
+mov bx,6
+mov cx,7
+xor ax,ax
+sub_loop:
+mov al,NUM2[BX]
+sbb al,NUM1[BX] ; subtract with borrow, used to compute subtraction between contents of r
+register from the accumulators content, along with the carry/borrow value
+aas ; adjusts the content of AL register to contain correct 1 digit unpacked
+mov diff[bx],al
+dec bx
+dec si
+loop sub_loop
+sbb diff[bx],0
+jmp continue
+call newline
+continue:
+MOV al,[buffer+5]
+sub al,30H
+mov bl,8
+mul bl
+MOV SI,AX
+mov si,offset [bal0+si]
+PUSH SI
+mov cx,7
+mov bx,0
+back_mem:
+mov al,diff[bx]
+OR AL,30H
+mov [si],al
+inc si
+inc BX
+loop back_mem
+POP SI
+mov cx,6
+JUMP_ZEROS:
+mov al,[si]
+sub al,30h
+jnz bal_disp
+inc si
+loop JUMP_ZEROS
+jmp bal_disp
+CALL EXIT
+;*****************************************************************************
+****************
+depo:
+mov dx,offset dep
+mov ah,09h
+int 21h
+call newline
+calculation2 proc
+mov dx,offset deposit
+mov ah,0ah
+int 21h
+CALL NEWLINE
+mov cx,7
+mov bx,0
+reset_correction2:
+mov correction2[bx],"0"
+inc bx
+loop reset_correction2
+xor bx,bx
+mov bl,7
+sub bl,deposit[1]
+XOR CX,CX
+mov CL,deposit[1]
+lea si,deposit[2]
+lea di,correction2[bx]
+replacement2:
+mov al,[si]
+mov [di],al
+inc si
+inc di
+loop replacement2
+MOV BX,6
+MOV CX,7
+NUMBER3:
+MOV AL,CORRECTION2[BX]
+SUB AL,30H
+MOV NUM3[BX],AL
+DEC BX
+LOOP NUMBER3
+addition:
+XOR AX,AX
+xor bx,bx
+MOV al,[buffer+5]
+sub al,30H
+mov bl,8
+mul bl
+MOV SI,AX
+lea si,[bal0+si+6]
+call newline
+MOV BX,6
+MOV CX,7
+NUMBER4:
+MOV AL,[SI]
+SUB AL,30H
+MOV NUM4[BX],AL
+DEC SI
+DEC BX
+LOOP NUMBER4
+mov bx,6
+mov cx,7
+xor ax,ax
+add_loop:
+mov al,NUM4[BX]
+adc al,NUM3[BX]
+aaa
+mov sum[bx],al
+dec bx
+dec si
+loop add_loop
+adc sum[bx],0
+jmp continue2
+call newline
+continue2:
+MOV al,[buffer+5]
+sub al,30H
+mov bl,8
+mul bl
+MOV SI,AX
+mov si,offset [bal0+si]
+PUSH SI
+mov cx,7
+mov bx,0
+back_mem2:
+mov al,sum[bx]
+OR AL,30H
+mov [si],al
+inc si
+inc BX
+loop back_mem2
+POP SI
+mov cx,6
+JUMP_ZEROS2:
+mov al,[si]
+sub al,30h
+jnz bal_disp
+inc si
+loop JUMP_ZEROS2
+jmp bal_disp
+CALL EXIT
+;*****************************************************************************
+**
+change_pin:
+call newline
+mov dx,offset old_pin
+mov ah,09h
+int 21h
+call newline
+mov dx,offset old_pn
+mov ah,0ah
+int 21h
+XOR AX,AX
+xor bx,bx
+MOV al,[buffer+5]
+sub al,30H
+mov bl,4
+mul bl
+MOV SI,AX
+LEA DX,[PIN0+si]
+MOV SI,DX
+push si
+MOV DI,OFFSET old_pn[2]
+MOV CX,4
+REPE CMPSB
+jnz wrong_pin
+jz change
+wrong_pin:
+call newline
+mov dx,offset wrng_pin
+mov ah,09h
+int 21h
+jmp menu
+change:
+call newline
+mov dx,offset pin_new
+mov ah,09h
+int 21h
+call newline
+mov dx,offset pin_nw
+mov ah,0ah
+int 21h
+call newline
+mov dx,offset pin_new2
+mov ah,09h
+int 21h
+call newline
+mov dx,offset pin_nw2
+mov ah,0ah
+int 21h
+lea si,pin_nw[2]
+lea di,pin_nw2[2]
+mov cx,4
+repe cmpsb
+jz replc
+jnz change
+replc:
+mov cx,4
+pop si
+mov bx,2
+replc_pin:
+mov al,pin_nw2[bx]
+mov [si],al
+inc bx
+inc si
+loop replc_pin
+jmp enter
+insufficient:
+mov dx,offset insuff
+mov ah,09h
+int 21h
+call check_bal
+ENDP
+NEWLINE:
+MOV AH,02 ; write character to standard input
+MOV DL,0DH ; equivalent to carriage return('\r')in ASCII
+INT 21H ; provides the output service to BIOS
+MOV DL,0AH ; equivalent line feed ('\n') in ASCII
+INT 21H
+ret ; pops the return address from the stack, transferring control to
+;address immediately after the call instruction
+exit:; to end the program we call interrupt 21h subfunction 4ch
+MOV AH,4CH; end program
+INT 21H
+MOV AH,4CH
+INT 21H
+END
