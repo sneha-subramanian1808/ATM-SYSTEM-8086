@@ -10,8 +10,11 @@ approach allows the consumer to complete all transactions personally, while the 
 system updates and maintains the data automatically.
 
 Advantages:
+
 ● Less work is required to execute the transaction.
+
 ● Less time is needed.
+
 ● There is no need to have a large number of documents on standby.
 
 ## Implementation
